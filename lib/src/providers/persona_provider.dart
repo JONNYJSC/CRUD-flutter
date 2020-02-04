@@ -1,21 +1,23 @@
-import 'dart:convert';
 import 'dart:io';
+import 'dart:convert';
 
+import 'package:http/http.dart' as http;
 import 'package:mime_type/mime_type.dart';
+import 'package:http_parser/http_parser.dart';
 import 'package:prueba_1/src/api/webapi_url.dart';
 import 'package:prueba_1/src/models/persona_model.dart';
-import 'package:http/http.dart' as http;
+import 'package:prueba_1/src/preferencias_usuarios/preferencias_usuario.dart';
 
 class PersonasProvider {
 
-  //final String _url = 'https://nodestart.herokuapp.com';
-  String _url = WebApi.url_api;
+  String _url = WebApi.urlApi;
+  final _prefs = new PreferenciasUsuario();
 
   Future<bool> crearPersona(Persona persona) async {
-
+    
     final url = '$_url/api/persons';
     final resp = await http.post(url,
-    headers: {"content-type": "application/json"},
+    headers: {"content-type": "application/json", "token": '${_prefs.token}'},
     body: profileToJson(persona));
     final decodedData = json.decode(resp.body);
     print(decodedData);
@@ -29,7 +31,7 @@ class PersonasProvider {
   Future<List<Persona>> cargarPersonas() async {
 
     final url = '$_url/api/persons';
-    final resp = await http.get(url);
+    final resp = await http.get(url, headers: {"token": '${_prefs.token}'} );
 
     final Map<String, dynamic> decodedData = json.decode(resp.body);
     final PersonModel dataP = new PersonModel.fromJson(decodedData);
@@ -42,7 +44,7 @@ class PersonasProvider {
     Future<bool> editarPersona(Persona persona) async {
     final url = '$_url/api/persons/${persona.sId}';
     final resp = await http.put(url, 
-    headers: {"content-type": "application/json"},
+    headers: {"content-type": "application/json", "token": '${_prefs.token}'},
     body: profileToJson(persona));
     final decodedData = json.decode(resp.body);
     print(decodedData);
@@ -52,7 +54,7 @@ class PersonasProvider {
   Future<bool> borrarPersona(String id) async {
 
     final url   = '$_url/api/persons/$id';
-    final resp  = await http.delete(url, headers: {"content-type": "application/json"});
+    final resp  = await http.delete(url, headers: {"content-type": "application/json", "token": '${_prefs.token}'});
     print(resp.body);
     if (resp.statusCode == 200) {
       return true;
@@ -60,9 +62,9 @@ class PersonasProvider {
         return false;
       }
   }
-
-  /*Future<String> subirImagen(File imagen) async {
-    final url = Uri.parse('https://api.cloudinary.com/v1_1/ds9itipvg/image/upload?upload_preset=g5ee325m');
+Persona persona;
+  Future<String> subirImagen(File imagen) async {
+    final url = Uri.parse(persona.pictures[0].url);
     final mimeType = mime(imagen.path).split('/');
 
     final imageUploadRequest = http.MultipartRequest(
@@ -87,6 +89,59 @@ class PersonasProvider {
     final respdata = json.decode(resp.body);
     print(respdata);
     return respdata['secure_url'];
-  }*/
+  }
+
+  /*---------------------------------------------------------------------*/
+  Future getUploadimg(_image) async {
+    String apiUrl = '$_url/api/persons';
+    http.Response response = await http.post(apiUrl,headers: {
+      "content-type": "multipart/form-data",
+    }, body: {'avatar':_image});
+    print("Result: ${response.body}");
+    return json.decode(response.body); 
+  }
+
+  Future getUploadImg(File _image) async {
+    String apiUrl = '$_url/api/persons';
+    final length = await _image.length();
+    final request = new http.MultipartRequest('POST', Uri.parse(apiUrl))
+      ..files.add(new http.MultipartFile('avatar', _image.openRead(), length));
+    http.Response response = await http.Response.fromStream(await request.send());
+    print("Result: ${response.body}");
+    return json.decode(response.body);
+  }
+
+/*-------------------------------------------------------------------------------------------------------------*/
+ File tmpFile;
+ String errMessage = 'Error Uploading Image';
+ String status = '';
+ String base64Image;
+
+    setStatus(String message) {
+    //setState(() {
+      status = message;
+    //});
+  }
+
+  startUpload() {
+    setStatus('Uploading Image...');
+    if (null == tmpFile) {
+      setStatus(errMessage);
+      return;
+    }
+    String fileName = tmpFile.path.split('/').last;
+    upload(fileName);
+  }
+ 
+  upload(String fileName) {
+    http.post('$_url/api/persons', body: {
+      "image": base64Image,
+      "name": fileName,
+    }).then((result) {
+      setStatus(result.statusCode == 200 ? result.body : errMessage);
+    }).catchError((error) {
+      setStatus(error);
+    });
+  }
 
 }

@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:prueba_1/src/utils/utils.dart';
 import 'package:prueba_1/src/models/persona_model.dart';
-import 'package:prueba_1/src/providers/persona_provider.dart';
 
 class HomePage extends StatelessWidget {
-
-  final personasProvider = new PersonasProvider();
-  final style_font = TextStyle(fontWeight: FontWeight.bold);
+  
   @override
   Widget build(BuildContext context) {
+
+    final Persona persData = ModalRoute.of(context).settings.arguments;
+    if(persData != null) {
+      persona = persData;
+    }
+    
     return Scaffold(
       appBar: AppBar(
         title: Text('Persona'),
@@ -48,7 +52,7 @@ class HomePage extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(left: 10.0),
                 child: ListTile(
-                  title: Text('${persona.name.first} ${persona.name.last}', style: style_font),
+                  title: Text('${persona.name.first} ${persona.name.last}', style: styleFont),
                   leading: CircleAvatar(
                     backgroundImage: NetworkImage(persona.pictures[0].url),
                   ),
